@@ -32,19 +32,25 @@ for file in files:
     # Check if the file is marked for deletion
     delfile = c.execute('SELECT Deleted FROM Songs WHERE Path == ?', (file,)).fetchall()
     try:
+        # Database returns a list of tuples.
+        # This means that delfile[0] is a tuple
+        # and delfile[0][0] is the first element of the tuple
+        # which is the value of the Deleted column
         if delfile[0][0] == 1:
             os.remove(file)
             pbar.total = pbar.total - 1
             pbar.refresh()
             continue
     
-    # If the file has not been marked for deletion
+    # If the file is not in the database
     # delfile is empty and an IndexError is raised
     except IndexError:
         pass
     
     # Check if the file is in the database
     ID = c.execute('SELECT SongID FROM Songs WHERE Path == ?', (file,)).fetchall()
+    # if the file in not in the database
+    # no tuples will be returned and ID will be empty
     if len(ID) == 0:
         # Play file
         cmd = ['ffplay',file]
@@ -59,14 +65,21 @@ for file in files:
             FileDelete = input("Delete file? (y/n): ")
 
         if FileDelete.casefold() == 'y':
+            # Add file to database and mark deleted
             c.execute('INSERT INTO Songs (Path) VALUES (?)', (file,))
             c.execute('UPDATE Songs SET Deleted = 1 WHERE Path == ?', (file,))
             con.commit()
+
+            # Delete file and update progress bar
+            # with the new total
             os.remove(file)
             pbar.total = pbar.total - 1
             pbar.refresh()
         else:
+            # Add file to database and mark not deleted
             c.execute('INSERT INTO Songs (Path) VALUES (?)', (file,))
             c.execute('UPDATE Songs SET Deleted = 0 WHERE Path == ?', (file,))
             con.commit()
+
+            # Update progress bar
             pbar.update(1)
