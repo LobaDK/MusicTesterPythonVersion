@@ -28,7 +28,7 @@ for file in files:
 
     # Create full path to file
     file = str(Path(music_path, file))
-    
+
     # Check if the file is marked for deletion
     delfile = c.execute('SELECT Deleted FROM Songs WHERE Path == ?', (file,)).fetchall()
     try:
@@ -41,19 +41,19 @@ for file in files:
             pbar.total = pbar.total - 1
             pbar.refresh()
             continue
-    
+
     # If the file is not in the database
     # delfile is empty and an IndexError is raised
     except IndexError:
         pass
-    
+
     # Check if the file is in the database
     ID = c.execute('SELECT SongID FROM Songs WHERE Path == ?', (file,)).fetchall()
     # if the file in not in the database
     # no tuples will be returned and ID will be empty
     if len(ID) == 0:
         # Play file
-        cmd = ['ffplay',file]
+        cmd = ['ffplay', file]
         subprocess.Popen(cmd).wait()
 
         # Display the progress bar
