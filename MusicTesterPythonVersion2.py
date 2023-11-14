@@ -17,13 +17,16 @@ except FileNotFoundError:
         exit()
 
 
-def StartupCheck(full_path, allowed, output_path, file):
+def StartupCheck(file_no_extension, full_path, output_path, file):
     """
     Checks if the file is in the database and marked as allowed.
     If the file is marked as allowed and does not exist in the output path, it is copied to the output path.
     If the file is marked as not allowed and exists in the output path, it is removed from the output path.
     Returns True if the file was copied or removed, False otherwise.
     """
+    # Check if the file is marked as allowed
+    allowed = c.execute('SELECT Allowed FROM Songs WHERE SongName == ?', (file_no_extension,)).fetchall()
+
     try:
         # Database returns a list of tuples.
         # This means that allowed[0] is the first tuple in the list
@@ -67,7 +70,7 @@ con = sqlite3.connect(database_path)
 # Create table if it doesn't exist and make Path case insensitive
 c = con.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS Songs
-                (SongID INTEGER PRIMARY KEY AUTOINCREMENT, Path TEXT COLLATE NOCASE, Allowed INTEGER)''')
+                (SongID INTEGER PRIMARY KEY AUTOINCREMENT, SongName TEXT COLLATE NOCASE, Allowed INTEGER)''')
 con.commit()
 
 # Get list of m4a files in folder
@@ -86,13 +89,17 @@ pbar = tqdm(total=len(files), desc='Files', unit='files', position=2)
 
 # Iterate through files
 for file in files:
+    # Create full path to file
     full_path = str(Path(music_path, file))
-    allowed = c.execute('SELECT Allowed FROM Songs WHERE Path == ?', (full_path,)).fetchall()
 
+    # Create filename without extension
+    file_no_extension = Path(file).stem
+
+    # Update progress bar
     pbar.update(1)
 
     # Use StartupCheck to check if any any files need to be copied to or deleted in the output folder
-    if StartupCheck(full_path, allowed, output_path, file):
+    if StartupCheck(file_no_extension, full_path, output_path, file):
         continue
 
     # Play the audio file
@@ -106,7 +113,7 @@ for file in files:
         allowed_input = input('\nAllow file? (y/n): ').casefold()
 
     # Add file to database
-    c.execute('INSERT INTO Songs (Path, Allowed) VALUES (?, ?)', (full_path, 1 if allowed_input == 'y' else 0))
+    c.execute('INSERT INTO Songs (SongName, Allowed) VALUES (?, ?)', (file_no_extension, 1 if allowed_input == 'y' else 0))
     con.commit()
 
     # Copy file to output folder if allowed
